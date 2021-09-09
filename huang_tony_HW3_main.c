@@ -16,6 +16,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 
 int main(int argc, char *argv[]) 
@@ -31,6 +32,8 @@ int main(int argc, char *argv[])
 		//case 0 is always returned within the child
 		case 0:
 		while(1){
+			//execlp("full path to executable file if using long format", "name of process", "extra options")
+			//execlp("/bin/ls", "ls", NULL);
 			printf("I am the child, my PID: %d, and my PPID is: %d.\n", getpid(), getppid());
 			sleep(3);
 		}
@@ -39,6 +42,7 @@ int main(int argc, char *argv[])
 		//default case is for any PID greater than 0 
 		//because for the parent fork() returns the pid of the child
 		default:
+		wait(NULL); //the parent needs to wait until the child finishes
 		while(1){
 			printf("I am the parent, my PID: %d, and my PPID is: %d.\n", getpid(), getppid());
 			sleep(3);
