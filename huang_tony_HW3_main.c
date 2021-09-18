@@ -71,6 +71,8 @@ int main(int argc, char *argv[])
 	char * strExit = "exit";
 
 	char * returnFgets;
+	char * delimitedInput;
+	char * restOfInput;
 
 	//while loop continues to take in input from user until user exits
 	while(1){
@@ -92,13 +94,14 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		/*
 		printf("Buffer now contains: %s, and stringComparison is: %s\n", buffer, strExit);
 
 		int stringComparison = strcasecmp(buffer, strExit);
 		printf ("string Comparison is: %d\n", stringComparison);
 
 		stringComparison = strncasecmp(buffer, strExit, 4);
-		printf ("string n Comparison is: %d\n", stringComparison);
+		printf ("string n Comparison is: %d\n", stringComparison);*/
 
 		//string comparison for the first 4 characters to see if its "EXIT"
 		if(	strncasecmp(strExit, buffer, 4)	== 0){
@@ -107,9 +110,13 @@ int main(int argc, char *argv[])
 		}
 		else{
 			printf("User input was: \"%s\"\n", buffer);
-		}
+			restOfInput = buffer;
 
-		
+			printf("input broken down by space:\n");
+			while(delimitedInput = strtok_r(restOfInput, " ", &restOfInput)){
+				printf("%s \n", delimitedInput);
+			}
+		}
 	}
 
 	
