@@ -20,7 +20,7 @@
 
 #define BUFFER_SIZE										180
 
-char * getInputFromUser(char * buffer);
+char * getInputFromUser(char * buffer, char * promp);
 void tokenizeStoreString(char * string, char * parsedStrings[]);
 void printArray(char * stringArray[]);
 
@@ -138,10 +138,7 @@ int main(int argc, char *argv[])
 	//and we need 1 extra byte for null terminator
 	char * parsedBuffer[(BUFFER_SIZE/2) +1];
 	char * strExit = "exit"; //used for string comparisons
-
-	
-
-	int keepRunning = 1;
+	int keepRunning = 1; //keeps loop running for user input
 	char * returnFgets; //used for checking if fgets returned a null
 	int forkResult; //used to tell which process is the child/parent
 
@@ -157,7 +154,7 @@ int main(int argc, char *argv[])
 		//case 0 is always returned within the child
 		case 0:
 			printf("Child process activated, PID: %d.\n",getpid());
-			returnFgets = getInputFromUser(buffer);
+			returnFgets = getInputFromUser(buffer, argv[1]);
 			//if fgets() returns null we either have end of file or an error
 			//we then check which one it is and stop looping
 			if (NULL == returnFgets){
@@ -185,7 +182,9 @@ int main(int argc, char *argv[])
 			else
 			{
 				tokenizeStoreString(buffer, parsedBuffer);
-				printArray(parsedBuffer);
+				printArray(parsedBuffer); //function used to check if items are stored properly
+				//int execvp(const char *file, char *const argv[]);
+				//execvp will go here
 			}
 			printf("Child process with PID: %d and parent PID %d will now die. \n", getpid(), getppid());
 
@@ -208,10 +207,10 @@ int main(int argc, char *argv[])
 }
 
 //fills the parameter "buffer" with user input string
-char * getInputFromUser(char * buffer){
+char * getInputFromUser(char * buffer, char * promp){
 	char * returnFgets;
 
-	printf("Please input your command line!\n");
+	printf("Please input your command line! %s ", promp);
 
 	returnFgets = fgets(buffer, BUFFER_SIZE, stdin);
 
@@ -220,7 +219,7 @@ char * getInputFromUser(char * buffer){
 
 void tokenizeStoreString(char * string, char * parsedStrings[]){
 	printf("tokenizer activated!\n");
-	
+
 	//used to place a null pointer after the last tokenized string
 	int count = 0;
 
@@ -247,6 +246,7 @@ void tokenizeStoreString(char * string, char * parsedStrings[]){
 	return;
 }
 
+//prints all strings within an array of strings
 void printArray(char * stringArray[]){
 	printf("printArray activated\n");
 
