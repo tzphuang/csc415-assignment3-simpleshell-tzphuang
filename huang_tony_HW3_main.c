@@ -131,16 +131,18 @@ int main(int argc, char *argv[])
 
 
 	//buffer will hold the user's command inputs
-	char buffer[BUFFER_SIZE+1];
+	char * buffer = malloc(BUFFER_SIZE+1);
 
 	//parsedBuffer size should be able to hold a line of 180 bytes
 	//if those bytes are separated by spaces, then you get 90 valid bytes
 	//and we need 1 extra byte for null terminator
-	char * parsedBuffer[(BUFFER_SIZE/2) +1];
+	//char * parsedBuffer[(BUFFER_SIZE/2) +1];
+	char ** parsedBuffer = malloc( ((BUFFER_SIZE/2)+1)  * sizeof(char*));
 	char * strExit = "exit"; //used for string comparisons
 	int keepRunning = 1; //keeps loop running for user input
 	char * returnFgets; //used for checking if fgets returned a null
 	int forkResult; //used to tell which process is the child/parent
+	char * defaultPrompt = "> ";
 
 	//keep looping so shell continues taking inputs from user
 	while(keepRunning){
@@ -154,7 +156,14 @@ int main(int argc, char *argv[])
 		//case 0 is always returned within the child
 		case 0:
 			printf("Child process activated, PID: %d.\n",getpid());
-			returnFgets = getInputFromUser(buffer, argv[1]);
+
+			if(NULL != argv){
+				returnFgets = getInputFromUser(buffer, argv[1]);
+			}
+			else{
+				returnFgets = getInputFromUser(buffer, defaultPrompt);
+			}
+			
 			//if fgets() returns null we either have end of file or an error
 			//we then check which one it is and stop looping
 			if (NULL == returnFgets){
@@ -165,7 +174,7 @@ int main(int argc, char *argv[])
 				}
 
 				if(ferror(stdin)){
-					printf("Error! Input error for fgets().\n");
+					perror("Error! Input error for fgets():\n");
 				}
 
 				keepRunning = 0;
@@ -183,8 +192,12 @@ int main(int argc, char *argv[])
 			{
 				tokenizeStoreString(buffer, parsedBuffer);
 				printArray(parsedBuffer); //function used to check if items are stored properly
-				//int execvp(const char *file, char *const argv[]);
-				//execvp will go here
+				
+				if(-1 == execvp(parsedBuffer[0], parsedBuffer))
+				{
+					perror("Error on execvp:");
+					exit(1);
+				}
 			}
 			printf("Child process with PID: %d and parent PID %d will now die. \n", getpid(), getppid());
 
@@ -202,7 +215,9 @@ int main(int argc, char *argv[])
 
 	}
 
-	
+	//for every malloc there is a free
+	free(buffer);
+	free(parsedBuffer);
 	return 0;
 }
 
@@ -213,6 +228,9 @@ char * getInputFromUser(char * buffer, char * promp){
 	printf("Please input your command line! %s ", promp);
 
 	returnFgets = fgets(buffer, BUFFER_SIZE, stdin);
+
+	//gets rid of the "\n" at the end of the string with a null terminator
+	buffer[strlen(buffer) - 1] = '\0';
 
 	return returnFgets;
 }
@@ -255,6 +273,9 @@ void printArray(char * stringArray[]){
 	while(NULL != stringArray[count]){
 		printf("%s\n",stringArray[count]);
 		count++;
+		if(NULL == stringArray[count]){
+			printf("inside printArray() while loop. count: %d\n", count);
+		}
 	}
 
 	printf("printArray finished\n");
