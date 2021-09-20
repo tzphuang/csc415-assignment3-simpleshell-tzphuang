@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
 	char * returnFgets; //used for checking if fgets returned a null
 	int forkResult; //used to tell which process is the child/parent
 	char * defaultPrompt = "> ";
+	int execvpReturn;
 
 	//keep looping so shell continues taking inputs from user
 	while(keepRunning){
@@ -183,21 +184,25 @@ int main(int argc, char *argv[])
 
 			//if user inputs "exit", stop looping for input
 			if(	strncasecmp(strExit, buffer, strlen(strExit))	== 0){
-			printf("User has input \"Exit\", program will exit gracefully.\n");
-			keepRunning = 0;
-			break;
+				printf("User has input \"Exit\", program will exit gracefully.\n");
+				keepRunning = 0;
+				break;
 			}
 			//if user input did not return null and was not "exit", parse it
 			else
 			{
 				tokenizeStoreString(buffer, parsedBuffer);
 				printArray(parsedBuffer); //function used to check if items are stored properly
+
+				//exec takes over the child process! so it does not continue to the next line
+				execvpReturn = execvp(parsedBuffer[0], parsedBuffer);
 				
-				if(-1 == execvp(parsedBuffer[0], parsedBuffer))
+				if(-1 == execvpReturn)
 				{
 					perror("Error on execvp:");
 					exit(1);
 				}
+				
 			}
 			printf("Child process with PID: %d and parent PID %d will now die. \n", getpid(), getppid());
 
@@ -209,7 +214,7 @@ int main(int argc, char *argv[])
 			printf("Parent process activated with PID: %d. Parent will begin waiting for child to die.\n", getpid());
 			wait(NULL); //the parent needs to wait until the child finishes
 			printf("Parent with PID: %d has stopped waiting for child to die.\n", getpid());
-			keepRunning = 0;
+			//keepRunning = 0;
 			break;
 		}
 
