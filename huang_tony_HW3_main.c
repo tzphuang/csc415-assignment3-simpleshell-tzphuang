@@ -143,82 +143,96 @@ int main(int argc, char *argv[])
 	char * returnFgets; //used for checking if fgets returned a null
 	int forkResult; //used to tell which process is the child/parent
 	char * defaultPrompt = "> ";
-	int execvpReturn;
+	int execvpReturn = 0;
+	pid_t childReturnPID;
 
 	//keep looping so shell continues taking inputs from user
 	while(keepRunning){
-		forkResult = fork();
+		
+		//setting custom prompt for shell
+		if(NULL != argv[1]){
+			returnFgets = getInputFromUser(buffer, argv[1]);
+		}
+		else{
+			returnFgets = getInputFromUser(buffer, defaultPrompt);
+		}
+		
+		//if fgets() returns null we either have end of file or an error
+		//we then check which one it is and stop looping
+		if (NULL == returnFgets){
+
+			//this can be forcefully activated when you input ctrl + d into the command line
+			if(feof(stdin)){
+				//printf("End of file! Exiting Gracefullly.\n");
+			}
+
+			if(ferror(stdin)){
+				perror("Error! Input error for fgets():\n");
+			}
+
+			keepRunning = 0;
+			break;
+		}
+
+		//if user inputs "exit", stop looping for input
+		if(	strncasecmp(strExit, buffer, 4)	== 0){
+			//printf("User has input \"Exit\", program will exit gracefully.\n");
+			keepRunning = 0;
+			break;
+		}
+		//if user input did not return null and was not "exit", parse it
+		else
+		{
+			tokenizeStoreString(buffer, parsedBuffer);
+			//printArray(parsedBuffer); //function used to check if items are stored properly
+
+			//fork() to create a new process so our current process does not 
+			forkResult = fork();
+		}
+		
 		switch (forkResult)
 		{
-		case -1:
-			printf("ERROR! Switch statement error -1, something went wrong with result from fork().\n");
-			break;
-
-		//case 0 is always returned within the child
-		case 0:
-			printf("Child process activated, PID: %d.\n",getpid());
-
-			if(NULL != argv){
-				returnFgets = getInputFromUser(buffer, argv[1]);
-			}
-			else{
-				returnFgets = getInputFromUser(buffer, defaultPrompt);
-			}
-			
-			//if fgets() returns null we either have end of file or an error
-			//we then check which one it is and stop looping
-			if (NULL == returnFgets){
-
-				//this can be forcefully activated when you input ctrl + d into the command line
-				if(feof(stdin)){
-					printf("End of file! Exiting Gracefullly.\n");
-				}
-
-				if(ferror(stdin)){
-					perror("Error! Input error for fgets():\n");
-				}
-
-				keepRunning = 0;
+			case -1:
+				printf("ERROR! Switch statement error -1, something went wrong with result from fork().\n");
 				break;
-			}
 
-			//if user inputs "exit", stop looping for input
-			if(	strncasecmp(strExit, buffer, strlen(strExit))	== 0){
-				printf("User has input \"Exit\", program will exit gracefully.\n");
-				keepRunning = 0;
-				break;
-			}
-			//if user input did not return null and was not "exit", parse it
-			else
-			{
-				tokenizeStoreString(buffer, parsedBuffer);
-				printArray(parsedBuffer); //function used to check if items are stored properly
+			//case 0 is always returned within the child
+			case 0:
+				//printf("Child process activated, PID: %d.\n",getpid());
 
 				//exec takes over the child process! so it does not continue to the next line
-				execvpReturn = execvp(parsedBuffer[0], parsedBuffer);
-				
-				if(-1 == execvpReturn)
-				{
-					perror("Error on execvp:");
-					exit(1);
-				}
-				
-			}
-			printf("Child process with PID: %d and parent PID %d will now die. \n", getpid(), getppid());
+				execvp(parsedBuffer[0], parsedBuffer);
+			break;
+			
+			//default case is for any PID greater than 0 
+			//because for the parent fork() returns the pid of the child
+			default: //printf("I am the parent, my PID: %d, and my PPID is: %d.\n", getpid(), getppid());
+				//printf("Parent process activated with PID: %d. Parent will begin waiting for child to die.\n", getpid());
+				childReturnPID = wait(&execvpReturn); //the parent needs to wait until the child finishes
 
-		break;
-		
-		//default case is for any PID greater than 0 
-		//because for the parent fork() returns the pid of the child
-		default: //printf("I am the parent, my PID: %d, and my PPID is: %d.\n", getpid(), getppid());
-			printf("Parent process activated with PID: %d. Parent will begin waiting for child to die.\n", getpid());
-			wait(NULL); //the parent needs to wait until the child finishes
-			printf("Parent with PID: %d has stopped waiting for child to die.\n", getpid());
-			//keepRunning = 0;
+				
+				//this handles if the user input something that was not valid for executing
+				if(childReturnPID == -1){
+					perror("Error on execvp:");
+				}
+				//default print message of child process completion
+				else{
+					printf("Child %d, exited with %d\n", childReturnPID, execvpReturn);
+				}
+				/*
+				//should trigger when execvpReturn returns 0
+				if(	WIFEXITED(*execvpReturn) != 0	){
+					printf("execvpReturn returned 0.\n");
+					
+				}*/
+
+				
+				
 			break;
 		}
 
 	}
+	//printf("Parent with PID: %d has stopped waiting for child to die.\n", getpid());
 
 	//for every malloc there is a free
 	free(buffer);
@@ -230,7 +244,7 @@ int main(int argc, char *argv[])
 char * getInputFromUser(char * buffer, char * promp){
 	char * returnFgets;
 
-	printf("Please input your command line! %s ", promp);
+	printf("%s", promp);
 
 	returnFgets = fgets(buffer, BUFFER_SIZE, stdin);
 
@@ -241,7 +255,7 @@ char * getInputFromUser(char * buffer, char * promp){
 }
 
 void tokenizeStoreString(char * string, char * parsedStrings[]){
-	printf("tokenizer activated!\n");
+	//printf("tokenizer activated!\n");
 
 	//used to place a null pointer after the last tokenized string
 	int count = 0;
@@ -265,7 +279,7 @@ void tokenizeStoreString(char * string, char * parsedStrings[]){
 	//after tokenizing input, after the last substring set it to a null ptr
 	parsedStrings[count] = NULL;
 
-	printf("tokenizer finished!\n");
+	//printf("tokenizer finished!\n");
 	return;
 }
 
